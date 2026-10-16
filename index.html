@@ -3,19 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Ludo Tashan Pro — Next-Level 3D</title>
+<title>3D Ludo Tashan Pro — Original App</title>
 
+<!-- PWA Manifest & Android Theme Color -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#ffd700">
 
-<!-- Three.js + OrbitControls -->
+<!-- Three.js + OrbitControls (3D Graphic Engine) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 
-<!-- PeerJS (VIP Voice) -->
+<!-- PeerJS (Real-Time Live WebRTC Voice Call) -->
 <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
-<!-- Firebase SDKs -->
+<!-- Firebase SDKs (Real Firestore Cloud Backend) -->
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -34,26 +35,32 @@
     justify-content:space-between;align-items:center;z-index:20;pointer-events:none;
   }
   .hud-pill{
-    pointer-events:all;background:rgba(10,15,36,0.85);backdrop-filter:blur(10px);
-    border:1px solid rgba(255,215,0,0.3);padding:6px 14px;border-radius:999px;
-    font-size:11px;font-weight:800;color:#ffd700;box-shadow:0 4px 18px rgba(0,0,0,0.5);
+    pointer-events:all;background:rgba(10,15,36,0.88);backdrop-filter:blur(10px);
+    border:1px solid rgba(255,215,0,0.35);padding:6px 14px;border-radius:999px;
+    font-size:11px;font-weight:800;color:#ffd700;box-shadow:0 4px 18px rgba(0,0,0,0.55);
     display:flex;align-items:center;gap:6px;
   }
   .vip-pill{background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;display:none}
 
+  /* VIP VOICE BUTTON */
   .voice-live-btn{
     pointer-events:all;background:rgba(10,15,36,0.9);border:1px solid rgba(56,189,248,0.4);
     color:#38bdf8;padding:6px 14px;border-radius:999px;font-size:11px;font-weight:800;
     cursor:pointer;display:flex;align-items:center;gap:6px;transition:all 0.2s;
   }
-  .voice-live-btn.locked{border-color:rgba(239,68,68,0.4);color:#f87171;background:rgba(239,68,68,0.1)}
+  .voice-live-btn.locked{
+    border-color:rgba(239,68,68,0.4);color:#f87171;background:rgba(239,68,68,0.1);
+  }
   .voice-live-btn.talking{
     background:#10b981;color:#fff;border-color:#10b981;
     box-shadow:0 0 18px rgba(16,185,129,0.8);animation:wavePulse 1s infinite alternate;
   }
-  @keyframes wavePulse{to{transform:scale(1.05);box-shadow:0 0 25px rgba(16,185,129,1)}}
+  @keyframes wavePulse{
+    from{transform:scale(1)}
+    to{transform:scale(1.05);box-shadow:0 0 25px rgba(16,185,129,1)}
+  }
 
-  /* SPEECH BUBBLE */
+  /* CHAT TAUNT BUBBLE */
   .chat-bubble{
     position:fixed;top:65px;left:50%;transform:translateX(-50%);
     background:#fff;color:#0f172a;padding:8px 18px;border-radius:14px;
@@ -104,6 +111,7 @@
   .tab-btn.active{background:#38bdf8;color:#000;border-color:#38bdf8}
   .tab-btn.gold-active{background:linear-gradient(135deg,#ffd700,#f59e0b);color:#000;border:none}
 
+  /* LIST CONTAINERS */
   .items-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding-right:4px}
   .grid-50{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding-right:4px}
 
@@ -231,7 +239,7 @@
 
 <script>
 // ========================================================
-// 1. ADVANCED PROCEDURAL AUDIO ENGINE (Next-Level Sounds & Lo-Fi BGM)
+// 1. PROCEDURAL SOUND SYNTHESIZER (BGM + ASMR)
 // ========================================================
 const AudioFX = (() => {
   let ctx = null;
@@ -243,7 +251,6 @@ const AudioFX = (() => {
     if (ctx.state === 'suspended') ctx.resume();
   }
 
-  // Next-Level Chill Gaming BGM (Generative Lo-Fi Arpeggio)
   function startBGM() {
     if (!ctx || bgmInterval || isMuted) return;
     const chords = [
@@ -276,7 +283,6 @@ const AudioFX = (() => {
     }, 280);
   }
 
-  // Realistic Wooden/Plastic Dice Clatter
   function playDiceRattle() {
     init();
     if (!ctx || isMuted) return;
@@ -296,7 +302,6 @@ const AudioFX = (() => {
     }
   }
 
-  // Water-Drop Wooden Pawn Step ("Pop")
   function playPawnHop() {
     init();
     if (!ctx || isMuted) return;
@@ -313,7 +318,6 @@ const AudioFX = (() => {
     osc.stop(ctx.currentTime + 0.08);
   }
 
-  // Desi Comic Sad Trombone (Wah-Wah-Wah-Waaaaah)
   function playTroll() {
     init();
     if (!ctx || isMuted) return;
@@ -347,7 +351,7 @@ function toggleBGM() {
 }
 
 // ========================================================
-// 2. FIREBASE AUTH & DATABASE
+// 2. FIREBASE AUTHENTICATION & CLOUD FIRESTORE
 // ========================================================
 const firebaseConfig = {
   apiKey: "AIzaSyBR4_sePZUeTsef4hhKgzHZq8b46_d_vt0",
@@ -397,16 +401,17 @@ function loginWithGoogle() {
   const provider = new firebase.auth.GoogleAuthProvider();
   auth.signInWithPopup(provider).catch(() => auth.signInWithRedirect(provider));
 }
+
 function loginAsGuest() {
   document.getElementById('authScreen').classList.add('hide');
   AudioFX.init();
   AudioFX.startBGM();
-  showToast("👤 Guest Mode: खेल शुरू हुआ!");
+  showToast("👤 Guest Mode: Khel shuru hua!");
   auth.signInAnonymously().catch(() => {});
 }
 
 // ========================================================
-// 3. VIP VOICE CHAT & TALKING TAUNTS
+// 3. VIP-ONLY LIVE VOICE ENGINE
 // ========================================================
 let peer = null, localStream = null, isVoiceActive = false;
 let voiceTimerInterval = null, voiceTimeLeft = 300;
@@ -432,7 +437,7 @@ function updateVoiceButtonState() {
 
 async function toggleLiveVoice() {
   if (!isMembershipActive()) {
-    alert("🔒 Voice Chat सिर्फ VIP Members के लिए है!\nकृपया प्लान खरीदें और ऑनलाइन बात करें।");
+    alert("🔒 Voice Chat sirf VIP Members ke liye hai!\nKripya membership plan lein aur online baatein karein.");
     openStore('vip');
     return;
   }
@@ -449,13 +454,13 @@ async function toggleLiveVoice() {
         btn.className = "voice-live-btn talking";
         micIcon.textContent = "🟢";
         micStatus.textContent = "Live Voice: ON";
-        showToast("🎤 VIP Voice Chat चालू!");
+        showToast("🎤 VIP Voice Chat chalu!");
         voiceTimerInterval = setInterval(() => {
           voiceTimeLeft--;
           if (voiceTimeLeft <= 0) {
             clearInterval(voiceTimerInterval);
             stopLiveVoice();
-            alert("⏱️ वॉइस चैट समय समाप्त!");
+            alert("⏱️ Voice chat samay samapt!");
           }
         }, 1000);
       });
@@ -464,7 +469,7 @@ async function toggleLiveVoice() {
         call.answer(localStream);
       });
     } catch (e) {
-      alert("माइक की अनुमति दें!");
+      alert("Mic permission allow karein!");
     }
   } else {
     stopLiveVoice();
@@ -477,7 +482,7 @@ function stopLiveVoice() {
   if (peer) peer.destroy();
   isVoiceActive = false;
   updateVoiceButtonState();
-  showToast("🔇 माइक बंद!");
+  showToast("🔇 Mic band kiya gaya!");
 }
 
 function speakTauntOutLoud(tauntText) {
@@ -499,7 +504,7 @@ function speakTauntOutLoud(tauntText) {
   }
 }
 
-// 200 Taunts Data
+// 200 Desi Taunts
 const ALL_TAUNTS = [];
 const BASE_TAUNTS = [
   "बेटा, तुमसे ना हो पाएगा! जाके कैरम खेलो!",
@@ -591,8 +596,18 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x070a18);
 scene.fog = new THREE.FogExp2(0x070a18, 0.022);
 
-const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0, 24, 21); // Ludo King Isometric View
+const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+function fitBoardToScreen() {
+  const aspect = window.innerWidth / window.innerHeight;
+  if (aspect < 0.6) {
+    camera.position.set(0, 25, 19.5); // Mobile Screen Fit
+  } else {
+    camera.position.set(0, 22.5, 17.5);
+  }
+  camera.lookAt(0, 0, 0);
+}
+fitBoardToScreen();
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -607,7 +622,6 @@ controls.maxPolarAngle = Math.PI / 2.15;
 controls.minDistance = 12;
 controls.maxDistance = 45;
 
-// Studio Lighting
 scene.add(new THREE.AmbientLight(0xffffff, 0.75));
 const sun = new THREE.DirectionalLight(0xfff6dd, 1.4);
 sun.position.set(12, 28, 16);
@@ -621,17 +635,14 @@ const blueRim = new THREE.DirectionalLight(0x38bdf8, 0.5);
 blueRim.position.set(-16, 10, -16);
 scene.add(blueRim);
 
-// Master Board Group
 const boardGroup = new THREE.Group();
 
-// Wooden Outer Slab
 const boardBaseMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.35, metalness: 0.15 });
 const boardBase = new THREE.Mesh(new THREE.BoxGeometry(19, 1.2, 19), boardBaseMat);
 boardBase.position.y = -0.6;
 boardBase.receiveShadow = true;
 boardGroup.add(boardBase);
 
-// Golden Border Rim
 const rimMat = new THREE.MeshStandardMaterial({ color: 0xffd700, roughness: 0.2, metalness: 0.9 });
 const r1 = new THREE.Mesh(new THREE.BoxGeometry(19.4, 0.4, 0.4), rimMat); r1.position.set(0, 0.1, 9.5);
 const r2 = new THREE.Mesh(new THREE.BoxGeometry(19.4, 0.4, 0.4), rimMat); r2.position.set(0, 0.1, -9.5);
@@ -639,16 +650,14 @@ const r3 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 19.4), rimMat); r3.pos
 const r4 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 19.4), rimMat); r4.position.set(-9.5, 0.1, 0);
 boardGroup.add(r1, r2, r3, r4);
 
-// 4 Ludo King Bases (Red, Green, Blue, Yellow)
 const basesData = [
-  { col: 0xef4444, x: -5, z: -5 }, // Red (Top-Left)
-  { col: 0x10b981, x: 5, z: -5 },  // Green (Top-Right)
-  { col: 0x0088ff, x: -5, z: 5 },  // Blue (Bottom-Left)
-  { col: 0xf59e0b, x: 5, z: 5 }    // Yellow (Bottom-Right)
+  { col: 0xef4444, x: -5, z: -5 },
+  { col: 0x10b981, x: 5, z: -5 },
+  { col: 0x0088ff, x: -5, z: 5 },
+  { col: 0xf59e0b, x: 5, z: 5 }
 ];
 
 basesData.forEach(b => {
-  // Big Colored Corner Box
   const corner = new THREE.Mesh(
     new THREE.BoxGeometry(7.2, 0.15, 7.2),
     new THREE.MeshStandardMaterial({ color: b.col, roughness: 0.25 })
@@ -657,7 +666,6 @@ basesData.forEach(b => {
   corner.receiveShadow = true;
   boardGroup.add(corner);
 
-  // Inner White Yard
   const yard = new THREE.Mesh(
     new THREE.BoxGeometry(5.2, 0.2, 5.2),
     new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 })
@@ -666,7 +674,6 @@ basesData.forEach(b => {
   yard.receiveShadow = true;
   boardGroup.add(yard);
 
-  // 4 Yard Pawn Circle Slots
   const offsets = [[-1.4, -1.4], [1.4, -1.4], [-1.4, 1.4], [1.4, 1.4]];
   offsets.forEach(off => {
     const slot = new THREE.Mesh(
@@ -678,10 +685,8 @@ basesData.forEach(b => {
   });
 });
 
-// Center 4-Color Victory Triangle Home
-const triGeo = new THREE.ConeGeometry(2.4, 0.8, 4);
 const centerPyramid = new THREE.Mesh(
-  triGeo,
+  new THREE.ConeGeometry(2.4, 0.8, 4),
   new THREE.MeshStandardMaterial({ color: 0xffd700, roughness: 0.2, metalness: 0.8 })
 );
 centerPyramid.rotation.y = Math.PI / 4;
@@ -689,7 +694,6 @@ centerPyramid.position.y = 0.45;
 centerPyramid.castShadow = true;
 boardGroup.add(centerPyramid);
 
-// 3D Path Way Cells (52 Nodes + Star Zones)
 const gotiPositions = [];
 const pathRadius = 6.2;
 for (let i = 0; i < 28; i++) {
@@ -710,7 +714,6 @@ for (let i = 0; i < 28; i++) {
   cell.receiveShadow = true;
   boardGroup.add(cell);
 
-  // If Safe, Add 3D Star
   if (isSafeStar) {
     const star = new THREE.Mesh(
       new THREE.SphereGeometry(0.18, 12, 12),
@@ -724,7 +727,6 @@ for (let i = 0; i < 28; i++) {
 }
 scene.add(boardGroup);
 
-// Realistic Sculpted Pawn (Ludo King Shape)
 function createSculptedPawn(gotiStyleId) {
   const s = GOTI_STYLES.find(x => x.id === gotiStyleId) || GOTI_STYLES[0];
   const points = [
@@ -752,7 +754,6 @@ function createSculptedPawn(gotiStyleId) {
   return grp;
 }
 
-// Spawn Hero Pawn (Player)
 let heroGoti = null;
 let currentTrackIdx = 0;
 function spawnHeroGoti(styleId) {
@@ -763,7 +764,6 @@ function spawnHeroGoti(styleId) {
 }
 spawnHeroGoti(1);
 
-// Realistic 3D Rounded Dice with Dots
 const diceGroup = new THREE.Group();
 const diceMesh = new THREE.Mesh(
   new THREE.BoxGeometry(1.4, 1.4, 1.4),
@@ -772,9 +772,8 @@ const diceMesh = new THREE.Mesh(
 diceMesh.castShadow = true;
 diceGroup.add(diceMesh);
 
-// Black Pips (Dots)
 const pipGeo = new THREE.SphereGeometry(0.12, 16, 16);
-const pipMat = new THREE.MeshBasicMaterial({ color: 0xef4444 }); // Classic Red Dot
+const pipMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
 const topDot = new THREE.Mesh(pipGeo, pipMat);
 topDot.position.set(0, 0.71, 0);
 diceGroup.add(topDot);
@@ -782,12 +781,11 @@ diceGroup.add(topDot);
 diceGroup.position.set(0, 1.8, 0);
 scene.add(diceGroup);
 
-// Dice Roll Physics & Sound
 let isRolling = false, rollT = 0, rollVal = 6;
 function roll3DDice() {
   if (isRolling) return;
   AudioFX.init();
-  AudioFX.playDiceRattle(); // Realistic Clatter Sound
+  AudioFX.playDiceRattle();
   isRolling = true;
   rollT = 0;
   rollVal = Math.floor(Math.random() * 6) + 1;
@@ -820,14 +818,13 @@ function animate() {
 }
 animate();
 
-// Hop Pawn with Audio "Pop"
 function hopHeroGoti(steps) {
   currentTrackIdx = (currentTrackIdx + steps) % gotiPositions.length;
   const target = gotiPositions[currentTrackIdx];
   let hopT = 0;
   const startX = heroGoti.position.x, startZ = heroGoti.position.z;
 
-  AudioFX.playPawnHop(); // Water-Drop Step Sound
+  AudioFX.playPawnHop();
 
   const itv = setInterval(() => {
     hopT += 0.08;
@@ -1032,6 +1029,7 @@ function showToast(msg) {
 }
 
 window.addEventListener('resize', () => {
+  fitBoardToScreen();
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
