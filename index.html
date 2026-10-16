@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>3D Ludo Tashan Pro — Original App</title>
+
+<!-- Three.js + OrbitControls (3D Engine) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+<!-- PeerJS (Live VIP Voice Chat) -->
+<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+
+<!-- Firebase SDKs (Real Cloud Backend) -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
+  body{
+    background:#05070e;color:#fff;font-family:system-ui,-apple-system,sans-serif;
+    height:100vh;overflow:hidden;touch-action:none;
+  }
+  #canvas3d{width:100vw;height:100vh;display:block}
+
+  /* TOP HUD */
+  #headerWallet{
+    position:fixed;top:10px;left:10px;right:10px;display:flex;
+    justify-content:space-between;align-items:center;z-index:20;pointer-events:none;
+  }
+  .hud-pill{
+    pointer-events:all;background:rgba(15,23,42,0.85);backdrop-filter:blur(10px);
+    border:1px solid rgba(255,255,255,0.15);padding:6px 12px;border-radius:999px;
+    font-size:11px;font-weight:800;color:#fbbf24;box-shadow:0 4px 18px rgba(0,0,0,0.5);
+    display:flex;align-items:center;gap:6px;
+  }
+  .vip-pill{background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;display:none}
+
+  /* VIP VOICE BUTTON */
+  .voice-live-btn{
+    pointer-events:all;background:rgba(15,23,42,0.9);border:1px solid rgba(56,189,248,0.4);
+    color:#38bdf8;padding:6px 14px;border-radius:999px;font-size:11px;font-weight:800;
+    cursor:pointer;display:flex;align-items:center;gap:6px;transition:all 0.2s;
+  }
+  .voice-live-btn.locked{
+    border-color:rgba(239,68,68,0.4);color:#f87171;background:rgba(239,68,68,0.1);
+  }
+  .voice-live-btn.talking{
+    background:#10b981;color:#fff;border-color:#10b981;
+    box-shadow:0 0 15px rgba(16,185,129,0.7);animation:wavePulse 1s infinite alternate;
+  }
+  @keyframes wavePulse{
+    from{transform:scale(1)}
+    to{transform:scale(1.05);box-shadow:0 0 25px rgba(16,185,129,0.9)}
+  }
+
+  /* SPEECH BUBBLE */
+  .chat-bubble{
+    position:fixed;top:65px;left:50%;transform:translateX(-50%);
+    background:#fff;color:#0f172a;padding:8px 16px;border-radius:14px;
+    font-size:13px;font-weight:900;z-index:60;box-shadow:0 10px 30px rgba(0,0,0,0.5);
+    opacity:0;transition:all 0.3s;pointer-events:none;max-width:85vw;text-align:center;
+  }
+  .chat-bubble.show{opacity:1;transform:translateX(-50%) translateY(5px) scale(1.04)}
+
+  /* BOTTOM 3D ACTION BAR */
+  #bottomUI{
+    position:fixed;bottom:14px;left:10px;right:10px;display:flex;
+    flex-direction:column;align-items:center;gap:8px;z-index:20;pointer-events:none;
+  }
+  .action-strip{
+    pointer-events:all;display:flex;gap:6px;background:rgba(15,23,42,0.92);
+    padding:5px 12px;border-radius:999px;border:1px solid rgba(255,255,255,0.15);
+    backdrop-filter:blur(12px);
+  }
+  .btn-ui{
+    background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);
+    color:#cbd5e1;padding:7px 12px;border-radius:999px;font-size:11px;
+    font-weight:800;cursor:pointer;display:flex;align-items:center;gap:4px;
+  }
+  .btn-ui.gold{background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#1a1200;border:none}
+  .btn-ui.purple{background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;border:none}
+  .btn-ui:active{transform:scale(0.95)}
+
+  .dice-btn-3d{
+    pointer-events:all;background:linear-gradient(135deg,#fbbf24,#f59e0b);
+    border:none;color:#1a1200;font-weight:900;font-size:15px;padding:12px 28px;
+    border-radius:999px;box-shadow:0 8px 30px rgba(251,191,36,0.45);cursor:pointer;
+  }
+
+  /* STORE MODAL */
+  #storeModal{
+    position:fixed;inset:0;background:rgba(5,7,15,0.98);backdrop-filter:blur(14px);
+    display:flex;flex-direction:column;padding:16px;z-index:200;opacity:0;
+    pointer-events:none;transition:opacity .3s;
+  }
+  #storeModal.show{opacity:1;pointer-events:all}
+  .modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .tab-strip{display:flex;gap:5px;margin-bottom:10px;overflow-x:auto}
+  .tab-btn{
+    flex:1;padding:8px 6px;border-radius:10px;font-size:11px;font-weight:800;
+    background:rgba(255,255,255,0.06);color:#94a3b8;border:1px solid rgba(255,255,255,0.1);
+    cursor:pointer;text-align:center;white-space:nowrap;
+  }
+  .tab-btn.active{background:#38bdf8;color:#000;border-color:#38bdf8}
+  .tab-btn.gold-active{background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#000;border:none}
+
+  .items-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding-right:4px}
+  .grid-50{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding-right:4px}
+
+  .item-card{
+    background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);
+    padding:8px 12px;border-radius:12px;font-size:12px;display:flex;
+    justify-content:space-between;align-items:center;font-weight:700;
+  }
+  .item-card.locked{opacity:0.55;border-color:rgba(239,68,68,0.3);background:rgba(239,68,68,0.04)}
+
+  .model-card{
+    background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);
+    border-radius:14px;padding:10px;display:flex;flex-direction:column;
+    justify-content:space-between;gap:6px;text-align:left;
+  }
+  .model-card.equipped{border-color:#38bdf8;background:rgba(56,189,248,0.12)}
+  .model-card.locked{opacity:0.6;border-color:rgba(239,68,68,0.3)}
+
+  .vip-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;overflow-y:auto}
+  .vip-card{
+    background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);
+    border-radius:16px;padding:12px;display:flex;flex-direction:column;justify-content:space-between;
+  }
+  .vip-card.highlight{border-color:#fbbf24;background:linear-gradient(145deg,rgba(251,191,36,0.15),rgba(15,23,42,0.9))}
+
+  /* LOGIN OVERLAY */
+  #authScreen{
+    position:fixed;inset:0;background:radial-gradient(circle at center,#0f172a,#030712);
+    z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:24px;text-align:center;
+  }
+  #authScreen.hide{display:none}
+  .app-logo{font-size:60px;margin-bottom:8px}
+  .app-title{font-size:28px;font-weight:900;color:#fbbf24;letter-spacing:1px}
+  .app-sub{font-size:12px;color:#94a3b8;margin-bottom:24px}
+  
+  .login-card{
+    background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);
+    border-radius:20px;padding:20px;width:100%;max-width:320px;display:flex;flex-direction:column;gap:12px;
+  }
+  .auth-btn{
+    width:100%;padding:12px;border-radius:12px;border:none;font-size:13px;font-weight:800;
+    cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;
+  }
+  .btn-google{background:#fff;color:#0f172a}
+  .btn-guest{background:rgba(255,255,255,0.1);color:#cbd5e1;border:1px solid rgba(255,255,255,0.2)}
+
+  #toast{
+    position:fixed;top:60px;left:50%;transform:translateX(-50%);
+    background:#10b981;color:#fff;padding:6px 16px;border-radius:999px;
+    font-size:12px;font-weight:800;z-index:300;display:none;
+  }
+</style>
+</head>
+<body>
+
+  <!-- LOGIN SCREEN -->
+  <div id="authScreen">
+    <div class="app-logo">🎲</div>
+    <div class="app-title">3D LUDO TASHAN</div>
+    <div class="app-sub">100% Original Cloud Game</div>
+
+    <div class="login-card">
+      <button class="auth-btn btn-google" onclick="loginWithGoogle()">
+        <span>🌐 Google / Gmail Login</span>
+      </button>
+      <button class="auth-btn btn-guest" onclick="loginAsGuest()">
+        <span>👤 Quick Play (Guest Account)</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- TOP HUD -->
+  <div id="headerWallet">
+    <div style="display:flex;gap:6px;align-items:center">
+      <div class="hud-pill" id="coinDisplay">💰 100 Pts</div>
+      <div class="hud-pill vip-pill" id="vipBadge">👑 VIP ACTIVE</div>
+    </div>
+    <div style="display:flex;gap:6px;align-items:center">
+      <button class="voice-live-btn locked" id="voiceBtn" onclick="toggleLiveVoice()">
+        <span id="micIcon">🔒</span> <span id="micStatus">Voice: VIP Only</span>
+      </button>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+  <div id="tauntBubble" class="chat-bubble">बेटा, तुमसे ना हो पाएगा! 🔥</div>
+
+  <!-- BOTTOM 3D ACTION BAR -->
+  <div id="bottomUI">
+    <div class="action-strip">
+      <div class="btn-ui gold" onclick="openStore('taunts')">📢 200 Voice ताने</div>
+      <div class="btn-ui" onclick="openStore('boards')">🎨 50 Boards</div>
+      <div class="btn-ui" onclick="openStore('gotis')">♟️ 50 Gotis</div>
+      <div class="btn-ui purple" onclick="openStore('vip')">👑 VIP Plans</div>
+    </div>
+    <button class="dice-btn-3d" id="btnRollDice" onclick="roll3DDice()">🎲 पासा उछालो</button>
+  </div>
+
+  <!-- STORE MODAL -->
+  <div id="storeModal">
+    <div class="modal-head">
+      <h2 style="font-size:16px;color:#fbbf24">🛍️ Tashan Studio & VIP Plans</h2>
+      <button onclick="closeStore()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer">✕</button>
+    </div>
+    <div class="tab-strip">
+      <div class="tab-btn active" id="tabTaunts" onclick="switchTab('taunts')">📢 200 Voice ताने</div>
+      <div class="tab-btn" id="tabBoards" onclick="switchTab('boards')">🎨 50 Boards</div>
+      <div class="tab-btn" id="tabGotis" onclick="switchTab('gotis')">♟️ 50 Gotis</div>
+      <div class="tab-btn gold-active" id="tabVIP" onclick="switchTab('vip')">👑 VIP Plans</div>
+    </div>
+
+    <div id="tierUnlockBar" style="background:rgba(255,255,255,0.06);padding:8px 12px;border-radius:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;font-size:11px">
+      <span id="tierStatusText">Next Tier: 1000 Pts</span>
+      <button class="btn-ui gold" style="padding:4px 10px;font-size:10px" onclick="unlockNextTier()">पॉइंट्स से अनलॉक</button>
+    </div>
+
+    <div id="storeContainer" class="items-list"></div>
+  </div>
+
+  <canvas id="canvas3d"></canvas>
+
+<script>
+// ========================================================
+// 1. FIREBASE AUTH & DATABASE
+// ========================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyBR4_sePZUeTsef4hhKgzHZq8b46_d_vt0",
+  authDomain: "ludo-tashan-real.firebaseapp.com",
+  projectId: "ludo-tashan-real",
+  storageBucket: "ludo-tashan-real.firebasestorage.app",
+  messagingSenderId: "351269459920",
+  appId: "1:351269459920:web:9c879d68db8be6d84a0bd5"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+let currentUser = null;
+let userData = {
+  points: 100,
+  membershipPlanPrice: null,
+  membershipExpiry: 0,
+  permTaunts: 5,
+  permBoards: 3,
+  permGotis: 3,
+  tierUnlocked: 5,
+  equippedBoard: 1,
+  equippedGoti: 1
+};
+
+auth.onAuthStateChanged(async (user) => {
+  if (user) {
+    currentUser = user;
+    document.getElementById('authScreen').classList.add('hide');
+    const doc = await db.collection('users').doc(user.uid).get();
+    if (doc.exists) {
+      userData = Object.assign(userData, doc.data());
+    } else {
+      await db.collection('users').doc(user.uid).set(userData);
+    }
+    updateHUD();
+    applyBoardTheme(userData.equippedBoard || 1);
+    spawnHeroGoti(userData.equippedGoti || 1);
+  } else {
+    currentUser = null;
+    document.getElementById('authScreen').classList.remove('hide');
+  }
+});
+
+function loginWithGoogle() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(() => auth.signInWithRedirect(provider));
+}
+function loginAsGuest() {
+  auth.signInAnonymously();
+}
+
+// ========================================================
+// 2. VIP-ONLY LIVE VOICE ENGINE (PeerJS)
+// ========================================================
+let peer = null;
+let localStream = null;
+let isVoiceActive = false;
+let voiceTimerInterval = null;
+const VOICE_LIMIT_SECONDS = 300;
+let voiceTimeLeft = VOICE_LIMIT_SECONDS;
+
+function isMembershipActive() {
+  return Date.now() < (userData.membershipExpiry || 0);
+}
+
+function updateVoiceButtonState() {
+  const btn = document.getElementById('voiceBtn');
+  const micStatus = document.getElementById('micStatus');
+  const micIcon = document.getElementById('micIcon');
+
+  if (!isMembershipActive()) {
+    btn.className = "voice-live-btn locked";
+    micIcon.textContent = "🔒";
+    micStatus.textContent = "Voice: VIP Only";
+  } else if (!isVoiceActive) {
+    btn.className = "voice-live-btn";
+    micIcon.textContent = "🎤";
+    micStatus.textContent = `Start Voice (${formatTime(voiceTimeLeft)})`;
+  }
+}
+
+function formatTime(sec) {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${s < 10 ? '0' : ''}${s}`;
+}
+
+async function toggleLiveVoice() {
+  if (!isMembershipActive()) {
+    alert("🔒 Voice Chat सिर्फ VIP Members के लिए है!\nकृपया प्लान खरीदें और ऑनलाइन बात करें।");
+    openStore('vip');
+    return;
+  }
+  if (voiceTimeLeft <= 0) {
+    alert("⏱️ आपका वॉइस टाइम खत्म हो चुका है!");
+    return;
+  }
+
+  const btn = document.getElementById('voiceBtn');
+  const micStatus = document.getElementById('micStatus');
+  const micIcon = document.getElementById('micIcon');
+
+  if (!isVoiceActive) {
+    try {
+      localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      peer = new Peer('vip_player_' + Math.floor(Math.random() * 999999));
+
+      peer.on('open', () => {
+        isVoiceActive = true;
+        btn.className = "voice-live-btn talking";
+        micIcon.textContent = "🟢";
+        micStatus.textContent = `Voice: ${formatTime(voiceTimeLeft)}`;
+        showToast("🎤 VIP Voice Chat चालू हो गया!");
+
+        voiceTimerInterval = setInterval(() => {
+          voiceTimeLeft--;
+          micStatus.textContent = `Voice: ${formatTime(voiceTimeLeft)}`;
+          if (voiceTimeLeft <= 0) {
+            clearInterval(voiceTimerInterval);
+            stopLiveVoice();
+            alert("⏱️ वॉइस चैट समय समाप्त!");
+          }
+        }, 1000);
+      });
+
+      peer.on('call', (call) => {
+        const callerIsVIP = call.metadata && call.metadata.isVIP === true;
+        if (!isMembershipActive() || !callerIsVIP) {
+          call.close();
+          return;
+        }
+        call.answer(localStream);
+        call.on('stream', (remoteStream) => {
+          let audio = document.getElementById('remoteAudioStream') || document.createElement('audio');
+          audio.id = 'remoteAudioStream';
+          audio.autoplay = true;
+          document.body.appendChild(audio);
+          audio.srcObject = remoteStream;
+        });
+      });
+    } catch (err) {
+      alert("माइक परमिशन की अनुमति दें!");
+    }
+  } else {
+    stopLiveVoice();
+  }
+}
+
+function stopLiveVoice() {
+  if (voiceTimerInterval) clearInterval(voiceTimerInterval);
+  if (localStream) localStream.getTracks().forEach(t => t.stop());
+  if (peer) peer.destroy();
+  isVoiceActive = false;
+  updateVoiceButtonState();
+  showToast("🔇 माइक बंद कर दिया गया।");
+}
+
+// ========================================================
+// 3. DESI TAUNT TEXT-TO-SPEECH (Hindi Voice)
+// ========================================================
+function speakTauntOutLoud(tauntText) {
+  const bubble = document.getElementById('tauntBubble');
+  bubble.textContent = tauntText;
+  bubble.classList.add('show');
+  setTimeout(() => bubble.classList.remove('show'), 3500);
+
+  AudioFX.playTroll();
+
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+    const clean = tauntText.replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '');
+    const utter = new SpeechSynthesisUtterance(clean);
+    utter.lang = 'hi-IN';
+    utter.pitch = 1.25;
+    utter.rate = 1.05;
+    const voices = window.speechSynthesis.getVoices();
+    const hiVoice = voices.find(v => v.lang.includes('hi') || v.lang.includes('IN'));
+    if (hiVoice) utter.voice = hiVoice;
+    window.speechSynthesis.speak(utter);
+  }
+}
+
+// ========================================================
+// 4. DATA: 200 TAUNTS, 50 BOARDS, 50 GOTIS
+// ========================================================
+const ALL_TAUNTS = [];
+const BASE_TAUNTS = [
+  "बेटा, तुमसे ना हो पाएगा! जाके कैरम खेलो!",
+  "लूडो का 'ल' भी आता है या सिर्फ पासा फेंकना जानते हो?",
+  "काहे मुंह लटका लिए? हाथ में दम रखो, किस्मत में नहीं!",
+  "एक गोटी घर पहुंची नहीं, और चले थे सिकंदर बनने!",
+  "हवा निकल गई? हिम्मत है तो दोबारा बदला लेके दिखाओ!",
+  "तेरी गोटी कटी नहीं है, उसका सरेआम मर्डर हुआ है!",
+  "मंदिर में 5 नारियल चढ़ा, तब शायद तेरा 6 आए!",
+  "आंसू पोंछ ले भाई, रुमाल पार्सल करवाऊं क्या?",
+  "अपुन का इलाका है, यहां पासा भी मेरी मर्जी से गिरता है!",
+  "घर जाके कंप्लेंट मत करना कि भैया ने बहुत मारा!",
+  "तुक्का एक बार लगता है, औकात बार-बार दिखती है!",
+  "इतना धीरे चल रहे हो जैसे सरकारी फाइल हो!",
+  "गोटी बचाने आए थे या दावत में पूड़ी खाने?",
+  "पासा चूम के फेंकने से 6 नहीं आता मुन्ना!",
+  "ये खेल शेरों का है, बिल्ली रास्ता नापे!",
+  "तेरा 6 आना और सरकारी नौकरी लगना, दोनों बराबर है!",
+  "नजर हटी, गोटी कटी! अब बैठ के मातम मनाओ!",
+  "स्क्रीन पर ज्यादा जोर मत लगाओ, फोन टूट जाएगा!",
+  "अगली बार खेलने से पहले बादाम खा के आना!",
+  "जितनी तुम्हारी चालें हैं, उतने हमारे बहाने हैं!"
+];
+
+for (let i = 1; i <= 200; i++) {
+  ALL_TAUNTS.push({
+    id: i,
+    text: i <= BASE_TAUNTS.length ? BASE_TAUNTS[i - 1] : `ताने नंबर ${i}: गोटी घर में सुरक्षित थी, बाहर लाके कटवा ली ना!`
+  });
+}
+
+const BOARD_THEMES = [];
+const GOTI_STYLES = [];
+for (let i = 1; i <= 50; i++) {
+  const bColor = new THREE.Color().setHSL((i * 137.5 % 360) / 360, 0.45, 0.12).getHex();
+  const rColor = new THREE.Color().setHSL((i * 137.5 % 360) / 360, 0.85, 0.55).getHex();
+  BOARD_THEMES.push({
+    id: i,
+    name: i === 1 ? "Classic Mahogany" : (i === 4 ? "24K Royal Gold" : `Theme Board #${i}`),
+    woodColor: i === 1 ? 0x0f172a : (i === 4 ? 0x2b1d03 : bColor),
+    rimColor: i === 1 ? 0xfbbf24 : (i === 4 ? 0xffd700 : rColor),
+    roughness: Math.max(0.1, 0.5 - (i * 0.007)),
+    metalness: Math.min(0.9, 0.2 + (i * 0.014))
+  });
+
+  const gColor = new THREE.Color().setHSL((i * 73.3 % 360) / 360, 0.85, 0.5).getHex();
+  GOTI_STYLES.push({
+    id: i,
+    name: `Goti #${i}`,
+    color: i === 1 ? 0x38bdf8 : (i === 4 ? 0xffd700 : gColor),
+    roughness: Math.max(0.08, 0.4 - (i * 0.006)),
+    metalness: Math.min(0.95, 0.1 + (i * 0.017)),
+    clearcoat: Math.min(1.0, 0.5 + (i * 0.01))
+  });
+}
+
+const MEMBERSHIPS = {
+  99: { price: 99, name: 'Starter VIP', days: 7, activeUnlocked: 10, permUnlock: 3, desc: '1 Week No-Ads & VIP Voice' },
+  149: { price: 149, name: 'Pro VIP', days: 30, activeUnlocked: 20, permUnlock: 7, desc: '1 Month No-Ads & VIP Voice' },
+  199: { price: 199, name: 'Ultra VIP', days: 60, activeUnlocked: 35, permUnlock: 15, desc: '2 Months No-Ads & VIP Voice' },
+  299: { price: 299, name: 'Supreme VIP', days: 90, activeUnlocked: 50, permUnlock: 25, desc: '3 Months (ALL 50 Unlocked & VIP Voice)' }
+};
+
+const POINTS_TIERS = [
+  { level: 1, cost: 1000, unlockCount: 15 },
+  { level: 2, cost: 2500, unlockCount: 40 },
+  { level: 3, cost: 3000, unlockCount: 80 },
+  { level: 4, cost: 3500, unlockCount: 120 },
+  { level: 5, cost: 4000, unlockCount: 160 },
+  { level: 6, cost: 4500, unlockCount: 185 },
+  { level: 7, cost: 5000, unlockCount: 200 }
+];
+
+function isItemUnlocked(type, id) {
+  if (id <= 5) return true;
+  if (type === 'taunt' && id <= (userData.permTaunts || 5)) return true;
+  if (type === 'board' && id <= (userData.permBoards || 3)) return true;
+  if (type === 'goti' && id <= (userData.permGotis || 3)) return true;
+  if (id <= (userData.tierUnlocked || 5)) return true;
+
+  if (isMembershipActive()) {
+    const planKey = Object.keys(MEMBERSHIPS).find(k => MEMBERSHIPS[k].price == userData.membershipPlanPrice);
+    if (planKey && id <= MEMBERSHIPS[planKey].activeUnlocked) return true;
+  }
+  return false;
+}
+
+// ========================================================
+// 5. THREE.JS 3D ENGINE
+// ========================================================
+const canvas = document.getElementById('canvas3d');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x05070e);
+scene.fog = new THREE.FogExp2(0x05070e, 0.02);
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set(0, 24, 22);
+
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
+controls.maxPolarAngle = Math.PI / 2.1;
+controls.minDistance = 10;
+controls.maxDistance = 50;
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+const sun = new THREE.DirectionalLight(0xfff1cf, 1.4);
+sun.position.set(14, 28, 16);
+sun.castShadow = true;
+scene.add(sun);
+
+const boardGroup = new THREE.Group();
+const boardBaseMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.35, metalness: 0.15 });
+const boardBase = new THREE.Mesh(new THREE.BoxGeometry(18, 1.2, 18), boardBaseMat);
+boardBase.position.y = -0.6;
+boardBase.receiveShadow = true;
+boardGroup.add(boardBase);
+
+const rimMat = new THREE.MeshStandardMaterial({ color: 0xfbbf24, roughness: 0.25, metalness: 0.85 });
+const r1 = new THREE.Mesh(new THREE.BoxGeometry(18.4, 0.4, 0.4), rimMat); r1.position.set(0, 0.1, 9);
+const r2 = new THREE.Mesh(new THREE.BoxGeometry(18.4, 0.4, 0.4), rimMat); r2.position.set(0, 0.1, -9);
+const r3 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 18.4), rimMat); r3.position.set(9, 0.1, 0);
+const r4 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 18.4), rimMat); r4.position.set(-9, 0.1, 0);
+boardGroup.add(r1, r2, r3, r4);
+
+const pyrMesh = new THREE.Mesh(new THREE.ConeGeometry(2.4, 1.2, 4), rimMat);
+pyrMesh.rotation.y = Math.PI / 4;
+pyrMesh.position.y = 0.6;
+pyrMesh.castShadow = true;
+boardGroup.add(pyrMesh);
+
+const trackRadius = 5.8;
+const gotiPositions = [];
+for (let i = 0; i < 24; i++) {
+  const ang = (i / 24) * Math.PI * 2;
+  const nx = Math.cos(ang) * trackRadius, nz = Math.sin(ang) * trackRadius;
+  const node = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.45, 0.45, 0.1, 24),
+    new THREE.MeshStandardMaterial({ color: (i % 6 === 0) ? 0xfbbf24 : 0x1e293b, roughness: 0.3 })
+  );
+  node.position.set(nx, 0.08, nz);
+  node.receiveShadow = true;
+  boardGroup.add(node);
+  gotiPositions.push({ x: nx, z: nz });
+}
+scene.add(boardGroup);
+
+function applyBoardTheme(themeId) {
+  const t = BOARD_THEMES.find(x => x.id === themeId);
+  if (!t) return;
+  boardBaseMat.color.setHex(t.woodColor);
+  boardBaseMat.roughness = t.roughness;
+  boardBaseMat.metalness = t.metalness;
+  rimMat.color.setHex(t.rimColor);
+  rimMat.roughness = t.roughness;
+  rimMat.metalness = t.metalness;
+}
+
+let heroGoti = null;
+let currentTrackIdx = 0;
+
+function createSculptedPawn(gotiStyleId) {
+  const s = GOTI_STYLES.find(x => x.id === gotiStyleId) || GOTI_STYLES[0];
+  const points = [
+    new THREE.Vector2(0.65, 0), new THREE.Vector2(0.65, 0.2),
+    new THREE.Vector2(0.55, 0.35), new THREE.Vector2(0.40, 0.8),
+    new THREE.Vector2(0.48, 0.9), new THREE.Vector2(0.35, 1.05),
+    new THREE.Vector2(0.20, 1.2), new THREE.Vector2(0.0, 1.2)
+  ];
+  const pawnMat = new THREE.MeshPhysicalMaterial({
+    color: s.color,
+    roughness: s.roughness,
+    metalness: s.metalness,
+    clearcoat: s.clearcoat,
+    clearcoatRoughness: 0.1
+  });
+  const grp = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.LatheGeometry(points, 32), pawnMat);
+  body.castShadow = true;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.35, 32, 32), pawnMat);
+  head.position.y = 1.35;
+  head.castShadow = true;
+  grp.add(body, head);
+  return grp;
+}
+
+function spawnHeroGoti(styleId) {
+  if (heroGoti) scene.remove(heroGoti);
+  heroGoti = createSculptedPawn(styleId);
+  heroGoti.position.set(gotiPositions[currentTrackIdx].x, 0.15, gotiPositions[currentTrackIdx].z);
+  scene.add(heroGoti);
+}
+
+const diceGroup = new THREE.Group();
+const diceMesh = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.4, 1.4), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 }));
+diceMesh.castShadow = true;
+diceGroup.add(diceMesh);
+diceGroup.position.set(0, 1.8, 0);
+scene.add(diceGroup);
+
+let isRolling = false, rollT = 0, rollVal = 6;
+function roll3DDice() {
+  if (isRolling) return;
+  isRolling = true;
+  rollT = 0;
+  rollVal = Math.floor(Math.random() * 6) + 1;
+}
+
+let clock = new THREE.Clock();
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = clock.getDelta();
+  const time = clock.getElapsedTime();
+  controls.update();
+
+  pyrMesh.rotation.y = time * 0.4;
+
+  if (isRolling) {
+    rollT += dt * 2.8;
+    diceGroup.position.y = 1.8 + Math.sin(rollT * Math.PI) * 4;
+    diceGroup.rotation.x += 18 * dt;
+    diceGroup.rotation.y += 24 * dt;
+    diceGroup.rotation.z += 15 * dt;
+
+    if (rollT >= 1) {
+      isRolling = false;
+      diceGroup.position.y = 1.8;
+      diceGroup.rotation.set(0, 0, 0);
+      hopHeroGoti(rollVal);
+    }
+  }
+  renderer.render(scene, camera);
+}
+animate();
+
+function hopHeroGoti(steps) {
+  currentTrackIdx = (currentTrackIdx + steps) % gotiPositions.length;
+  const target = gotiPositions[currentTrackIdx];
+  let hopT = 0;
+  const startX = heroGoti.position.x, startZ = heroGoti.position.z;
+  const itv = setInterval(() => {
+    hopT += 0.08;
+    heroGoti.position.x = startX + (target.x - startX) * hopT;
+    heroGoti.position.z = startZ + (target.z - startZ) * hopT;
+    heroGoti.position.y = 0.15 + Math.sin(hopT * Math.PI) * 1.5;
+    if (hopT >= 1) {
+      clearInterval(itv);
+      heroGoti.position.set(target.x, 0.15, target.z);
+    }
+  }, 20);
+}
+
+// ========================================================
+// 6. SYNTHESIZED TROLL SOUND
+// ========================================================
+const AudioFX = (() => {
+  let ctx = null;
+  function init() {
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === 'suspended') ctx.resume();
+  }
+  function playTroll() {
+    init();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    [659, 659, 523, 659, 587].forEach((f, i) => {
+      const o = ctx.createOscillator(); const g = ctx.createGain();
+      o.type = 'sawtooth'; o.frequency.setValueAtTime(f, now + i * 0.14);
+      if (i === 4) o.frequency.exponentialRampToValueAtTime(280, now + i * 0.14 + 0.35);
+      g.gain.setValueAtTime(0.2, now + i * 0.14);
+      g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.14 + 0.35);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(now + i * 0.14); o.stop(now + i * 0.14 + 0.38);
+    });
+  }
+  return { playTroll };
+})();
+
+// ========================================================
+// 7. STORE MODAL (TAUNTS, BOARDS, GOTIS, VIP)
+// ========================================================
+let currentTab = 'taunts';
+function openStore(tab) {
+  switchTab(tab);
+  document.getElementById('storeModal').classList.add('show');
+}
+function closeStore() {
+  document.getElementById('storeModal').classList.remove('show');
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('tabTaunts').className = 'tab-btn' + (tab === 'taunts' ? ' active' : '');
+  document.getElementById('tabBoards').className = 'tab-btn' + (tab === 'boards' ? ' active' : '');
+  document.getElementById('tabGotis').className = 'tab-btn' + (tab === 'gotis' ? ' active' : '');
+  document.getElementById('tabVIP').className = 'tab-btn' + (tab === 'vip' ? ' active gold-active' : '');
+
+  const nt = getNextPointTier();
+  const tierBar = document.getElementById('tierUnlockBar');
+  if (tab !== 'vip' && nt) {
+    tierBar.style.display = 'flex';
+    document.getElementById('tierStatusText').textContent = `Next Tier: ${nt.cost} Pts (Unlock up to #${nt.unlockCount})`;
+  } else {
+    tierBar.style.display = 'none';
+  }
+  renderStore();
+}
+
+function renderStore() {
+  const cont = document.getElementById('storeContainer');
+  cont.innerHTML = '';
+
+  if (currentTab === 'taunts') {
+    cont.className = 'items-list';
+    ALL_TAUNTS.forEach(t => {
+      const isUnl = isItemUnlocked('taunt', t.id);
+      const div = document.createElement('div');
+      div.className = 'item-card' + (isUnl ? '' : ' locked');
+      div.innerHTML = `
+        <span>${t.id}. ${t.text}</span>
+        <button class="btn-ui ${isUnl ? 'gold' : ''}" style="padding:5px 10px;font-size:10px" onclick="triggerTaunt(${t.id})">
+          ${isUnl ? '🔊 बोलकर मारो' : '🔒 Locked'}
+        </button>
+      `;
+      cont.appendChild(div);
+    });
+  } else if (currentTab === 'boards') {
+    cont.className = 'grid-50';
+    BOARD_THEMES.forEach(b => {
+      const isUnl = isItemUnlocked('board', b.id);
+      const isEq = (userData.equippedBoard === b.id);
+      const div = document.createElement('div');
+      div.className = 'model-card' + (isEq ? ' equipped' : '') + (isUnl ? '' : ' locked');
+      div.innerHTML = `
+        <div style="height:28px;border-radius:6px;background:linear-gradient(135deg,#${b.woodColor.toString(16).padStart(6,'0')},#${b.rimColor.toString(16).padStart(6,'0')})"></div>
+        <div style="font-size:12px;font-weight:800">${b.name}</div>
+        <button class="btn-ui ${isEq ? 'gold' : ''}" style="width:100%;justify-content:center;padding:5px;font-size:10px" onclick="equipBoard(${b.id})">
+          ${isEq ? '✓ EQUIPPED' : (isUnl ? 'EQUIP' : '🔒 UNLOCK')}
+        </button>
+      `;
+      cont.appendChild(div);
+    });
+  } else if (currentTab === 'gotis') {
+    cont.className = 'grid-50';
+    GOTI_STYLES.forEach(g => {
+      const isUnl = isItemUnlocked('goti', g.id);
+      const isEq = (userData.equippedGoti === g.id);
+      const div = document.createElement('div');
+      div.className = 'model-card' + (isEq ? ' equipped' : '') + (isUnl ? '' : ' locked');
+      div.innerHTML = `
+        <div style="height:28px;border-radius:6px;background:#${g.color.toString(16).padStart(6,'0')}"></div>
+        <div style="font-size:12px;font-weight:800">${g.name}</div>
+        <button class="btn-ui ${isEq ? 'gold' : ''}" style="width:100%;justify-content:center;padding:5px;font-size:10px" onclick="equipGoti(${g.id})">
+          ${isEq ? '✓ EQUIPPED' : (isUnl ? 'EQUIP' : '🔒 UNLOCK')}
+        </button>
+      `;
+      cont.appendChild(div);
+    });
+  } else if (currentTab === 'vip') {
+    cont.className = 'vip-grid';
+    [99, 149, 199, 299].forEach(pPrice => {
+      const p = MEMBERSHIPS[pPrice];
+      const div = document.createElement('div');
+      div.className = 'vip-card' + (pPrice === 299 ? ' highlight' : '');
+      div.innerHTML = `
+        <div>
+          <div style="font-size:13px;font-weight:900;color:#fff">${p.name}</div>
+          <div style="font-size:20px;font-weight:900;color:#fbbf24;margin:4px 0">₹${p.price}</div>
+          <div style="font-size:10px;color:#38bdf8">⏳ ${p.desc}</div>
+          <div style="font-size:10px;color:#cbd5e1;margin-top:4px">• ${p.activeUnlocked} ताने/मॉडल्स अनलॉक</div>
+          <div style="font-size:10px;font-weight:800;color:#34d399;margin-top:4px">🎙️ VIP Live Voice Access</div>
+        </div>
+        <button class="btn-ui ${pPrice === 299 ? 'gold' : ''}" style="width:100%;justify-content:center;margin-top:8px" onclick="buyMembership(${p.price})">
+          ₹${p.price} खरीदें
+        </button>
+      `;
+      cont.appendChild(div);
+    });
+  }
+}
+
+function triggerTaunt(id) {
+  if (isItemUnlocked('taunt', id)) {
+    const t = ALL_TAUNTS.find(x => x.id === id);
+    speakTauntOutLoud(t.text);
+    closeStore();
+  } else {
+    alert("🔒 यह ताना लॉक्ड है! पॉइंट्स जुटाएं या VIP पास लें।");
+  }
+}
+
+function equipBoard(id) {
+  if (isItemUnlocked('board', id)) {
+    userData.equippedBoard = id;
+    applyBoardTheme(id);
+    renderStore();
+    syncCloud();
+    showToast(`🎨 Board #${id} Equipped!`);
+  }
+}
+
+function equipGoti(id) {
+  if (isItemUnlocked('goti', id)) {
+    userData.equippedGoti = id;
+    spawnHeroGoti(id);
+    renderStore();
+    syncCloud();
+    showToast(`♟️ Goti #${id} Equipped!`);
+  }
+}
+
+function getNextPointTier() {
+  return POINTS_TIERS.find(t => t.unlockCount > (userData.tierUnlocked || 5));
+}
+
+function unlockNextTier() {
+  const nt = getNextPointTier();
+  if (!nt) return alert("🎉 सभी आइटम्स अनलॉक हो चुके हैं!");
+  if ((userData.points || 0) >= nt.cost) {
+    userData.points -= nt.cost;
+    userData.tierUnlocked = nt.unlockCount;
+    renderStore();
+    syncCloud();
+    alert(`🎉 बधाई! #${nt.unlockCount} तक के सभी ताने और मॉडल्स अनलॉक हो गए!`);
+  } else {
+    alert(`❌ कम पॉइंट्स हैं! आपको ${nt.cost} पॉइंट्स चाहिए।`);
+  }
+}
+
+function buyMembership(price) {
+  const plan = MEMBERSHIPS[price];
+  const durMs = plan.days * 24 * 60 * 60 * 1000;
+  userData.membershipPlanPrice = price;
+  userData.membershipExpiry = Math.max(Date.now(), userData.membershipExpiry || 0) + durMs;
+  userData.permTaunts = Math.max(userData.permTaunts || 5, plan.permUnlock);
+  userData.permBoards = Math.max(userData.permBoards || 3, plan.permUnlock);
+  userData.permGotis = Math.max(userData.permGotis || 3, plan.permUnlock);
+  voiceTimeLeft = VOICE_LIMIT_SECONDS;
+  syncCloud();
+  renderStore();
+  updateVoiceButtonState();
+  alert(`🎉 VIP Activated! ${plan.name} चालू हो गया।`);
+}
+
+function syncCloud() {
+  updateHUD();
+  if (currentUser) {
+    db.collection('users').doc(currentUser.uid).update(userData);
+  }
+}
+
+function updateHUD() {
+  document.getElementById('coinDisplay').textContent = `💰 ${userData.points || 0} Pts`;
+  const badge = document.getElementById('vipBadge');
+  if (isMembershipActive()) {
+    const daysLeft = Math.ceil((userData.membershipExpiry - Date.now()) / (1000 * 60 * 60 * 24));
+    badge.style.display = 'flex';
+    badge.textContent = `👑 VIP (${daysLeft}d)`;
+  } else {
+    badge.style.display = 'none';
+  }
+  updateVoiceButtonState();
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 1800);
+}
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body>
+</html>
