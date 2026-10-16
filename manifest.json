@@ -1,0 +1,16 @@
+{
+  "name": "3D Ludo Tashan Pro",
+  "short_name": "LudoTashan",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#05070e",
+  "theme_color": "#05070e",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/806/806131.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
